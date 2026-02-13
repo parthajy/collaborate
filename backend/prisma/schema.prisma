@@ -1,0 +1,38 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Space {
+  id        String       @id @default(cuid())
+  slug      String       @unique
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  items     CanvasItem[]
+}
+
+model CanvasItem {
+  id          String   @id @default(cuid())
+  spaceId     String
+  space       Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  type        String   // 'note', 'text', 'link', 'image', 'shape', 'emoji', 'drawing'
+  x           Float
+  y           Float
+  width       Float    @default(200)
+  height      Float    @default(150)
+  content     String   @default("")
+  color       String   @default("#FEF9C3") // Default yellow for sticky notes
+  url         String?  // For links and images
+  shapeType   String?  // For shapes: 'rectangle', 'circle', 'triangle', etc.
+  fontSize    Int      @default(16)
+  zIndex      Int      @default(0)
+  points      String?  // JSON array of {x, y} for freehand drawing
+  strokeColor String?  // Stroke color for drawing
+  strokeWidth Float?   // Stroke width for drawing
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

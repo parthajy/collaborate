@@ -1,0 +1,174 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Space+Mono:wght@400;700&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 45 30% 98%;
+    --foreground: 220 20% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 10%;
+
+    --primary: 220 80% 50%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 45 40% 96%;
+    --secondary-foreground: 220 20% 20%;
+
+    --muted: 45 20% 94%;
+    --muted-foreground: 220 10% 45%;
+
+    --accent: 340 80% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 88%;
+    --input: 220 15% 88%;
+    --ring: 220 80% 50%;
+
+    --radius: 1rem;
+
+    /* Sticky note colors */
+    --sticky-yellow: 48 100% 90%;
+    --sticky-pink: 340 100% 92%;
+    --sticky-blue: 210 100% 92%;
+    --sticky-green: 140 60% 88%;
+    --sticky-orange: 30 100% 90%;
+    --sticky-purple: 270 80% 92%;
+
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 220 20% 10%;
+    --sidebar-primary: 220 80% 50%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 45 40% 96%;
+    --sidebar-accent-foreground: 220 20% 20%;
+    --sidebar-border: 220 15% 88%;
+    --sidebar-ring: 220 80% 50%;
+  }
+
+  .dark {
+    --background: 220 20% 8%;
+    --foreground: 45 20% 95%;
+
+    --card: 220 20% 12%;
+    --card-foreground: 45 20% 95%;
+
+    --popover: 220 20% 12%;
+    --popover-foreground: 45 20% 95%;
+
+    --primary: 220 80% 60%;
+    --primary-foreground: 220 20% 8%;
+
+    --secondary: 220 15% 18%;
+    --secondary-foreground: 45 20% 90%;
+
+    --muted: 220 15% 18%;
+    --muted-foreground: 220 10% 55%;
+
+    --accent: 340 80% 60%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62% 40%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 15% 20%;
+    --input: 220 15% 20%;
+    --ring: 220 80% 60%;
+
+    --sticky-yellow: 48 60% 25%;
+    --sticky-pink: 340 50% 30%;
+    --sticky-blue: 210 50% 30%;
+    --sticky-green: 140 40% 25%;
+    --sticky-orange: 30 60% 28%;
+    --sticky-purple: 270 50% 30%;
+
+    --sidebar-background: 220 20% 12%;
+    --sidebar-foreground: 45 20% 95%;
+    --sidebar-primary: 220 80% 60%;
+    --sidebar-primary-foreground: 220 20% 8%;
+    --sidebar-accent: 220 15% 18%;
+    --sidebar-accent-foreground: 45 20% 90%;
+    --sidebar-border: 220 15% 20%;
+    --sidebar-ring: 220 80% 60%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+}
+
+/* Canvas grid background */
+.canvas-grid {
+  background-image: radial-gradient(circle, hsl(var(--border)) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Smooth dragging */
+.dragging {
+  cursor: grabbing !important;
+  user-select: none;
+  z-index: 9999 !important;
+  /* Remove transition during drag for instant response */
+  transition: none !important;
+}
+
+/* Canvas item shadows */
+.canvas-item {
+  box-shadow: 0 2px 8px -2px rgba(0, 0, 0, 0.1), 0 4px 16px -4px rgba(0, 0, 0, 0.08);
+  transition: box-shadow 0.15s ease-out;
+  will-change: transform, box-shadow;
+}
+
+.canvas-item:hover {
+  box-shadow: 0 4px 12px -2px rgba(0, 0, 0, 0.15), 0 8px 24px -4px rgba(0, 0, 0, 0.1);
+}
+
+.canvas-item.dragging {
+  box-shadow: 0 12px 32px -4px rgba(0, 0, 0, 0.25), 0 20px 56px -8px rgba(0, 0, 0, 0.18);
+}
+
+/* Sticky note texture */
+.sticky-note {
+  background: linear-gradient(135deg, transparent 0%, rgba(255,255,255,0.1) 50%, transparent 100%);
+}
+
+/* Selection ring */
+.selected-ring {
+  box-shadow: 0 0 0 2px hsl(var(--primary)), 0 0 0 4px hsl(var(--primary) / 0.2);
+}
+
+/* Toolbar glass effect */
+.toolbar-glass {
+  background: hsl(var(--card) / 0.9);
+  backdrop-filter: blur(12px);
+  border: 1px solid hsl(var(--border));
+}
+
+/* Smooth transitions for canvas */
+.canvas-transition {
+  transition: transform 0.1s ease-out;
+}
+
+/* Hide scrollbar for canvas */
+.canvas-container::-webkit-scrollbar {
+  display: none;
+}
+
+.canvas-container {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

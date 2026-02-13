@@ -1,0 +1,289 @@
+import { useParams, useNavigate, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
+import { spaceApi } from "@/lib/space-api";
+import { useCanvas } from "@/hooks/use-canvas";
+import { Canvas } from "@/components/canvas/Canvas";
+import { Toolbar } from "@/components/canvas/Toolbar";
+import { Button } from "@/components/ui/button";
+import { useRef, useState, useCallback, useEffect } from "react";
+import html2canvas from "html2canvas";
+
+export default function Space() {
+  const { slug } = useParams<{ slug: string }>();
+  const navigate = useNavigate();
+
+  const {
+    data: space,
+    isLoading,
+    error,
+  } = useQuery({
+    queryKey: ["space", slug],
+    queryFn: () => spaceApi.getOrCreate(slug!),
+    enabled: !!slug,
+    retry: false,
+  });
+
+  if (!slug) {
+    navigate("/");
+    return null;
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
+        <p className="text-muted-foreground">Loading space...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6">
+        <div className="text-center max-w-md">
+          <h1 className="text-2xl font-bold mb-4">Invalid Space Name</h1>
+          <p className="text-muted-foreground mb-6">
+            Space names must be 3-50 characters and contain only lowercase
+            letters, numbers, and hyphens.
+          </p>
+          <Button onClick={() => navigate("/")}>Go Home</Button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!space) {
+    return null;
+  }
+
+  return <SpaceCanvas slug={slug} initialItems={space.items} />;
+}
+
+function SpaceCanvas({
+  slug,
+  initialItems,
+}: {
+  slug: string;
+  initialItems: ReturnType<typeof useCanvas>["items"];
+}) {
+  const canvasRef = useRef<HTMLDivElement>(null);
+  const [isDrawingMode, setIsDrawingMode] = useState(false);
+  const [isPanMode, setIsPanMode] = useState(false);
+  const [drawingColor] = useState("#000000");
+  const [drawingWidth] = useState(3);
+
+  const {
+    items,
+    selectedId,
+    setSelectedId,
+    pan,
+    zoom,
+    cursors,
+    notification,
+    createItem,
+    updateItem,
+    deleteItem,
+    bringToFront,
+    resetSpace,
+    handlePan,
+    handleZoom,
+    resetView,
+    updateMyCursor,
+  } = useCanvas({ slug, initialItems });
+
+  const handleAddItem = async (type: Parameters<typeof createItem>[0], shapeType?: string) => {
+    const item = await createItem(type, shapeType ? { shapeType: shapeType as "rectangle" | "circle" | "triangle" | "diamond" | "star" | "hexagon" | "arrow" | "line" } : undefined);
+    return item;
+  };
+
+  const handleAddImage = async (url: string) => {
+    const item = await createItem("image", { url });
+    return item;
+  };
+
+  const handleAddEmoji = async (emoji: string) => {
+    const item = await createItem("emoji", { content: emoji });
+    return item;
+  };
+
+  const handleAddLink = async () => {
+    await createItem("link");
+  };
+
+  // Double-click on canvas creates sticky note at position
+  const handleDoubleClick = useCallback(
+    async (position: { x: number; y: number }) => {
+      await createItem("sticky", { position });
+    },
+    [createItem]
+  );
+
+  // Cursor tracking
+  const handleCursorMove = useCallback(
+    (x: number, y: number) => {
+      updateMyCursor(x, y);
+    },
+    [updateMyCursor]
+  );
+
+  // Drawing mode
+  const handleToggleDrawingMode = useCallback(() => {
+    setIsDrawingMode((prev) => !prev);
+    setIsPanMode(false);
+    setSelectedId(null);
+  }, [setSelectedId]);
+
+  // Pan mode
+  const handleTogglePanMode = useCallback(() => {
+    setIsPanMode((prev) => !prev);
+    setIsDrawingMode(false);
+    setSelectedId(null);
+  }, [setSelectedId]);
+
+  // Drawing handlers
+  const handleDrawingEnd = useCallback(
+    async (points: Array<{ x: number; y: number }>) => {
+      if (points.length < 2) return;
+
+      // Find bounding box
+      let minX = Infinity,
+        minY = Infinity;
+      for (const point of points) {
+        minX = Math.min(minX, point.x);
+        minY = Math.min(minY, point.y);
+      }
+
+      // Normalize points relative to position
+      const normalizedPoints = points.map((p) => ({
+        x: p.x - minX,
+        y: p.y - minY,
+      }));
+
+      await createItem("drawing", {
+        position: { x: minX, y: minY },
+        points: normalizedPoints,
+        strokeColor: drawingColor,
+        strokeWidth: drawingWidth,
+      });
+    },
+    [createItem, drawingColor, drawingWidth]
+  );
+
+  // Export canvas as PNG
+  const handleExportPNG = useCallback(async () => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    try {
+      const exportCanvas = await html2canvas(canvas, {
+        backgroundColor: "#ffffff",
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+      });
+
+      const link = document.createElement("a");
+      link.download = `${slug}-collaborate.png`;
+      link.href = exportCanvas.toDataURL("image/png");
+      link.click();
+    } catch (error) {
+      console.error("Failed to export PNG:", error);
+    }
+  }, [slug]);
+
+  // Keyboard delete support
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Delete selected item with Delete or Backspace key
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedId) {
+        // Don't delete if user is typing in an input/textarea
+        const target = e.target as HTMLElement;
+        if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
+          return;
+        }
+        e.preventDefault();
+        deleteItem(selectedId);
+      }
+      // Escape to deselect
+      if (e.key === "Escape") {
+        setSelectedId(null);
+        if (isDrawingMode) {
+          setIsDrawingMode(false);
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedId, deleteItem, setSelectedId, isDrawingMode]);
+
+  return (
+    <div className="fixed inset-0 bg-background overflow-hidden">
+      {/* Header */}
+      <header className="fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between pointer-events-none">
+        <Link
+  to="/"
+  className="flex items-center gap-2 pointer-events-auto hover:opacity-80 transition-opacity"
+>
+  <img
+    src="/favicon.png"
+    alt="Collaborate"
+    className="w-5 h-5 rounded-sm"
+  />
+  <span className="font-semibold">Collaborate</span>
+</Link>
+
+      </header>
+
+      {/* Notification toast */}
+      {notification && (
+        <div className="fixed top-16 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-card border border-border rounded-lg shadow-lg animate-in fade-in slide-in-from-top-2 duration-300">
+          <span className="text-sm font-medium">{notification}</span>
+        </div>
+      )}
+
+      {/* Canvas */}
+      <Canvas
+        items={items}
+        selectedId={selectedId}
+        pan={pan}
+        zoom={zoom}
+        cursors={cursors}
+        isDrawingMode={isDrawingMode}
+        isPanMode={isPanMode}
+        drawingColor={drawingColor}
+        drawingWidth={drawingWidth}
+        onSelect={setSelectedId}
+        onPan={handlePan}
+        onZoom={handleZoom}
+        onItemUpdate={updateItem}
+        onItemDelete={deleteItem}
+        onBringToFront={bringToFront}
+        onDoubleClick={handleDoubleClick}
+        onCursorMove={handleCursorMove}
+        onDrawingEnd={handleDrawingEnd}
+        canvasRef={canvasRef}
+      />
+
+      {/* Toolbar */}
+      <Toolbar
+        slug={slug}
+        zoom={zoom}
+        isDrawingMode={isDrawingMode}
+        isPanMode={isPanMode}
+        onAddItem={handleAddItem}
+        onAddImage={handleAddImage}
+        onAddEmoji={handleAddEmoji}
+        onAddLink={handleAddLink}
+        onZoomIn={() => handleZoom(0.1)}
+        onZoomOut={() => handleZoom(-0.1)}
+        onResetView={resetView}
+        onResetSpace={resetSpace}
+        onToggleDrawingMode={handleToggleDrawingMode}
+        onTogglePanMode={handleTogglePanMode}
+        onExportPNG={handleExportPNG}
+      />
+    </div>
+  );
+}
