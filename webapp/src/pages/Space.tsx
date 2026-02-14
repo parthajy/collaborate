@@ -1,10 +1,12 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { Sparkles, Loader2 } from "lucide-react";
 import { spaceApi } from "@/lib/space-api";
 import { useCanvas } from "@/hooks/use-canvas";
+import { useLocalUser } from "@/hooks/use-local-user";
 import { Canvas } from "@/components/canvas/Canvas";
 import { Toolbar } from "@/components/canvas/Toolbar";
+import { UserSettings } from "@/components/canvas/UserSettings";
 import { Button } from "@/components/ui/button";
 import { useRef, useState, useCallback, useEffect } from "react";
 import html2canvas from "html2canvas";
@@ -73,6 +75,9 @@ function SpaceCanvas({
   const [drawingColor] = useState("#000000");
   const [drawingWidth] = useState(3);
 
+  // Local user for name/cursor
+  const { name: userName, color: userColor, setName, setColor, colors } = useLocalUser();
+
   const {
     items,
     selectedId,
@@ -90,7 +95,7 @@ function SpaceCanvas({
     handleZoom,
     resetView,
     updateMyCursor,
-  } = useCanvas({ slug, initialItems });
+  } = useCanvas({ slug, initialItems, userName, userColor });
 
   const handleAddItem = async (type: Parameters<typeof createItem>[0], shapeType?: string) => {
     const item = await createItem(type, shapeType ? { shapeType: shapeType as "rectangle" | "circle" | "triangle" | "diamond" | "star" | "hexagon" | "arrow" | "line" } : undefined);
@@ -109,6 +114,34 @@ function SpaceCanvas({
 
   const handleAddLink = async () => {
     await createItem("link");
+  };
+
+  const handleAddTable = async () => {
+    // Create a 3x3 table by default
+    const tableData = Array(3).fill(null).map(() =>
+      Array(3).fill(null).map(() => ({ value: "" }))
+    );
+    await createItem("table", {
+      content: JSON.stringify(tableData),
+    });
+  };
+
+  const handleAddConnector = async (connectorType: "straight" | "elbow" | "curved") => {
+    await createItem("connector", {
+      content: connectorType,
+    });
+  };
+
+  const handleAddLocalImage = async (file: File) => {
+    // Convert file to data URL for local storage
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const dataUrl = e.target?.result as string;
+      if (dataUrl) {
+        await createItem("image", { url: dataUrl });
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   // Double-click on canvas creates sticky note at position
@@ -223,17 +256,22 @@ function SpaceCanvas({
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-40 px-4 py-3 flex items-center justify-between pointer-events-none">
         <Link
-  to="/"
-  className="flex items-center gap-2 pointer-events-auto hover:opacity-80 transition-opacity"
->
-  <img
-    src="/favicon.png"
-    alt="Collaborate"
-    className="w-5 h-5 rounded-sm"
-  />
-  <span className="font-semibold">Collaborate</span>
-</Link>
-
+          to="/"
+          className="flex items-center gap-2 pointer-events-auto hover:opacity-80 transition-opacity"
+        >
+          <Sparkles className="w-5 h-5 text-primary" />
+          <span className="font-semibold">Collaborate</span>
+        </Link>
+        <div className="pointer-events-auto flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">{userName}</span>
+          <UserSettings
+            name={userName}
+            color={userColor}
+            colors={colors}
+            onNameChange={setName}
+            onColorChange={setColor}
+          />
+        </div>
       </header>
 
       {/* Notification toast */}
@@ -276,6 +314,9 @@ function SpaceCanvas({
         onAddImage={handleAddImage}
         onAddEmoji={handleAddEmoji}
         onAddLink={handleAddLink}
+        onAddTable={handleAddTable}
+        onAddConnector={handleAddConnector}
+        onAddLocalImage={handleAddLocalImage}
         onZoomIn={() => handleZoom(0.1)}
         onZoomOut={() => handleZoom(-0.1)}
         onResetView={resetView}

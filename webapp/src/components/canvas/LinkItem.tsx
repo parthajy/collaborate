@@ -28,8 +28,10 @@ export function LinkItem({
   const [isDragging, setIsDragging] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editValue, setEditValue] = useState(item.url || item.content || "");
+  const [localPos, setLocalPos] = useState({ x: item.x, y: item.y });
   const inputRef = useRef<HTMLInputElement>(null);
   const dragStart = useRef({ x: 0, y: 0, itemX: 0, itemY: 0 });
+  const rafRef = useRef<number | null>(null);
 
   // Update edit value when item changes
   useEffect(() => {
@@ -37,6 +39,13 @@ export function LinkItem({
       setEditValue(item.url || item.content || "");
     }
   }, [item.url, item.content, isEditing]);
+
+  // Sync position from props when not dragging
+  useEffect(() => {
+    if (!isDragging) {
+      setLocalPos({ x: item.x, y: item.y });
+    }
+  }, [item.x, item.y, isDragging]);
 
   const handleMouseDown = useCallback(
     (e: React.MouseEvent) => {
@@ -61,15 +70,26 @@ export function LinkItem({
     const handleMouseMove = (e: MouseEvent) => {
       const dx = (e.clientX - dragStart.current.x) / zoom;
       const dy = (e.clientY - dragStart.current.y) / zoom;
-      onUpdate({
-        x: dragStart.current.itemX + dx,
-        y: dragStart.current.itemY + dy,
+      const newX = dragStart.current.itemX + dx;
+      const newY = dragStart.current.itemY + dy;
+
+      // Update local position immediately for smooth visual
+      setLocalPos({ x: newX, y: newY });
+
+      // Debounce the actual update with RAF
+      if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      rafRef.current = requestAnimationFrame(() => {
+        onUpdate({ x: newX, y: newY });
       });
     };
 
     const handleMouseUp = () => {
       setIsDragging(false);
       onDragEnd();
+      if (rafRef.current) {
+        cancelAnimationFrame(rafRef.current);
+        rafRef.current = null;
+      }
     };
 
     window.addEventListener("mousemove", handleMouseMove);
@@ -136,12 +156,13 @@ export function LinkItem({
       className={cn(
         "absolute select-none",
         !isEditing && "cursor-pointer",
-        isDragging && "cursor-grabbing",
+        isDragging && "cursor-grabbing dragging",
+        !isDragging && "canvas-item",
         isSelected && "selected-ring rounded-lg"
       )}
       style={{
-        left: item.x,
-        top: item.y,
+        left: localPos.x,
+        top: localPos.y,
         width: item.width || 280,
         zIndex: item.zIndex || 0,
       }}

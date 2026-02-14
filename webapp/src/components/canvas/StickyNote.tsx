@@ -198,7 +198,7 @@ export function StickyNote({
       onDoubleClick={handleDoubleClick}
     >
       {/* Content */}
-      <div className="sticky-note absolute inset-0 p-4 overflow-hidden">
+      <div className="sticky-note absolute inset-0 p-4 pb-6 overflow-hidden">
         {isEditing ? (
           <textarea
             ref={textareaRef}
@@ -214,6 +214,13 @@ export function StickyNote({
           </p>
         )}
       </div>
+
+      {/* Creator name */}
+      {item.createdBy && (
+        <div className="absolute bottom-1 left-2 text-[10px] text-foreground/40 truncate max-w-[calc(100%-1rem)]">
+          {item.createdBy}
+        </div>
+      )}
 
       {/* Controls (visible when selected) - positioned inside top area */}
       {isSelected && !isDragging && (

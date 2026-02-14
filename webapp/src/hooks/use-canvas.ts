@@ -5,6 +5,8 @@ import { spaceApi, STICKY_COLORS, DEFAULT_DIMENSIONS } from "@/lib/space-api";
 interface UseCanvasProps {
   slug: string;
   initialItems: CanvasItem[];
+  userName?: string;
+  userColor?: string;
 }
 
 export interface CursorPosition {
@@ -28,7 +30,7 @@ function getGuestName() {
   return `Guest ${Math.floor(Math.random() * 1000)}`;
 }
 
-export function useCanvas({ slug, initialItems }: UseCanvasProps) {
+export function useCanvas({ slug, initialItems, userName, userColor }: UseCanvasProps) {
   const [items, setItems] = useState<CanvasItem[]>(initialItems);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [pan, setPan] = useState({ x: 0, y: 0 });
@@ -39,9 +41,17 @@ export function useCanvas({ slug, initialItems }: UseCanvasProps) {
 
   // My cursor info
   const clientId = useRef(`client-${Date.now()}-${Math.random().toString(36).slice(2)}`);
-  const myColor = useRef(getRandomColor());
-  const myName = useRef(getGuestName());
+  const myColor = useRef(userColor || getRandomColor());
+  const myName = useRef(userName || getGuestName());
   const lastCursorUpdate = useRef(0);
+
+  // Update refs when props change
+  if (userName && userName !== myName.current) {
+    myName.current = userName;
+  }
+  if (userColor && userColor !== myColor.current) {
+    myColor.current = userColor;
+  }
 
   // Pending updates for debouncing
   const pendingUpdates = useRef<Map<string, { updates: Partial<CanvasItem>; timeout: NodeJS.Timeout }>>(new Map());
@@ -196,12 +206,14 @@ export function useCanvas({ slug, initialItems }: UseCanvasProps) {
         points?: Array<{ x: number; y: number }>;
         strokeColor?: string;
         strokeWidth?: number;
+        connectorType?: "straight" | "elbow" | "curved";
       }
     ) => {
       const centerX = (-pan.x + window.innerWidth / 2) / zoom;
       const centerY = (-pan.y + window.innerHeight / 2) / zoom;
       const dims = DEFAULT_DIMENSIONS[type] || { width: 200, height: 200 };
 
+      // Build base request
       const request: CreateItemRequest = {
         type,
         x: options?.position?.x ?? centerX - dims.width / 2,
@@ -215,7 +227,29 @@ export function useCanvas({ slug, initialItems }: UseCanvasProps) {
         points: options?.points,
         strokeColor: options?.strokeColor ?? "#000000",
         strokeWidth: options?.strokeWidth ?? 3,
+        createdBy: myName.current,
       };
+
+      // Add table-specific data
+      if (type === "table") {
+        const tableData = Array(3).fill(null).map(() =>
+          Array(3).fill(null).map(() => ({ value: "" }))
+        );
+        request.tableData = tableData;
+        request.rows = 3;
+        request.cols = 3;
+      }
+
+      // Add connector-specific data
+      if (type === "connector") {
+        const connType = options?.content as "straight" | "elbow" | "curved" || "straight";
+        request.connectorType = connType;
+        request.startPoint = { x: centerX - 50, y: centerY };
+        request.endPoint = { x: centerX + 50, y: centerY };
+        request.arrowEnd = true;
+        request.arrowStart = false;
+        request.content = undefined; // Clear content since we used it for type
+      }
 
       try {
         // Optimistic update

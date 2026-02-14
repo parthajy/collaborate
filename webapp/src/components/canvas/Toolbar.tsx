@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useState, useRef } from "react";
 import {
   StickyNote,
   Type,
@@ -22,6 +22,9 @@ import {
   Download,
   Hand,
   MousePointer2,
+  Table,
+  MoveRight,
+  Upload,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -58,6 +61,9 @@ interface ToolbarProps {
   onAddImage: (url: string) => void;
   onAddEmoji: (emoji: string) => void;
   onAddLink: () => void;
+  onAddTable: () => void;
+  onAddConnector: (connectorType: "straight" | "elbow" | "curved") => void;
+  onAddLocalImage: (file: File) => void;
   onZoomIn: () => void;
   onZoomOut: () => void;
   onResetView: () => void;
@@ -89,6 +95,9 @@ export function Toolbar({
   onAddImage,
   onAddEmoji,
   onAddLink,
+  onAddTable,
+  onAddConnector,
+  onAddLocalImage,
   onZoomIn,
   onZoomOut,
   onResetView,
@@ -99,6 +108,18 @@ export function Toolbar({
 }: ToolbarProps) {
   const [imageUrl, setImageUrl] = useState("");
   const [copied, setCopied] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && file.type.startsWith("image/")) {
+      onAddLocalImage(file);
+    }
+    // Reset input so the same file can be selected again
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }, [onAddLocalImage]);
 
   const handleShare = useCallback(async () => {
     const url = window.location.href;
@@ -269,6 +290,77 @@ export function Toolbar({
             icon={Link2}
             label="Add link"
             onClick={onAddLink}
+          />
+
+          {/* Table tool */}
+          <ToolbarButton
+            icon={Table}
+            label="Add table"
+            onClick={onAddTable}
+          />
+
+          {/* Connector/Arrow tool */}
+          <Popover>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-10 w-10">
+                    <MoveRight className="h-5 w-5" />
+                  </Button>
+                </PopoverTrigger>
+              </TooltipTrigger>
+              <TooltipContent>Add connector</TooltipContent>
+            </Tooltip>
+            <PopoverContent className="w-auto p-2" side="top">
+              <div className="flex flex-col gap-1">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start"
+                  onClick={() => onAddConnector("straight")}
+                >
+                  Straight Arrow
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start"
+                  onClick={() => onAddConnector("elbow")}
+                >
+                  Elbow Arrow
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="justify-start"
+                  onClick={() => onAddConnector("curved")}
+                >
+                  Curved Arrow
+                </Button>
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Upload local image */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10"
+                onClick={() => fileInputRef.current?.click()}
+              >
+                <Upload className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Upload image</TooltipContent>
+          </Tooltip>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileChange}
           />
         </div>
 

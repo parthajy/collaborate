@@ -8,6 +8,8 @@ import { ImageItem } from "./ImageItem";
 import { EmojiItem } from "./EmojiItem";
 import { DrawingItem } from "./DrawingItem";
 import { LinkItem } from "./LinkItem";
+import { TableItem } from "./TableItem";
+import { ConnectorItem } from "./ConnectorItem";
 
 interface CursorPosition {
   clientId: string;
@@ -246,6 +248,10 @@ export function Canvas({
         return <DrawingItem key={item.id} {...props} />;
       case "link":
         return <LinkItem key={item.id} {...props} />;
+      case "table":
+        return <TableItem key={item.id} {...props} />;
+      case "connector":
+        return <ConnectorItem key={item.id} {...props} />;
       default:
         return null;
     }

@@ -12,7 +12,7 @@ export interface CursorData {
   color: string;
 }
 
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
+const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "";
 
 // Space API
 export const spaceApi = {
@@ -150,4 +150,6 @@ export const DEFAULT_DIMENSIONS: Record<string, { width: number; height: number 
   emoji: { width: 60, height: 60 },
   drawing: { width: 400, height: 300 },
   link: { width: 280, height: 60 },
+  table: { width: 300, height: 150 },
+  connector: { width: 100, height: 100 },
 };

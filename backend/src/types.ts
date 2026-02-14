@@ -19,6 +19,8 @@ export const canvasItemTypeSchema = z.enum([
   "emoji",
   "drawing",
   "link",
+  "table",
+  "connector",
 ]);
 export type CanvasItemType = z.infer<typeof canvasItemTypeSchema>;
 
@@ -42,6 +44,20 @@ export const pointSchema = z.object({
 });
 export type Point = z.infer<typeof pointSchema>;
 
+// Table cell schema
+export const tableCellSchema = z.object({
+  value: z.string(),
+});
+export type TableCell = z.infer<typeof tableCellSchema>;
+
+// Connector endpoint schema
+export const connectorEndpointSchema = z.object({
+  itemId: z.string().optional(),
+  x: z.number(),
+  y: z.number(),
+});
+export type ConnectorEndpoint = z.infer<typeof connectorEndpointSchema>;
+
 // Base canvas item schema
 export const canvasItemSchema = z.object({
   id: z.string(),
@@ -59,6 +75,17 @@ export const canvasItemSchema = z.object({
   points: z.array(pointSchema).optional(),
   strokeColor: z.string().optional(),
   strokeWidth: z.number().optional(),
+  createdBy: z.string().optional(),
+  // Table specific
+  tableData: z.array(z.array(tableCellSchema)).optional(),
+  rows: z.number().optional(),
+  cols: z.number().optional(),
+  // Connector specific
+  connectorType: z.enum(["straight", "elbow", "curved"]).optional(),
+  startPoint: connectorEndpointSchema.optional(),
+  endPoint: connectorEndpointSchema.optional(),
+  arrowStart: z.boolean().optional(),
+  arrowEnd: z.boolean().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
 });
@@ -88,6 +115,17 @@ export const createItemRequestSchema = z.object({
   points: z.array(pointSchema).optional(),
   strokeColor: z.string().optional(),
   strokeWidth: z.number().optional(),
+  createdBy: z.string().optional(),
+  // Table specific
+  tableData: z.array(z.array(tableCellSchema)).optional(),
+  rows: z.number().optional(),
+  cols: z.number().optional(),
+  // Connector specific
+  connectorType: z.enum(["straight", "elbow", "curved"]).optional(),
+  startPoint: connectorEndpointSchema.optional(),
+  endPoint: connectorEndpointSchema.optional(),
+  arrowStart: z.boolean().optional(),
+  arrowEnd: z.boolean().optional(),
 });
 export type CreateItemRequest = z.infer<typeof createItemRequestSchema>;
 
@@ -105,6 +143,16 @@ export const updateItemRequestSchema = z.object({
   points: z.array(pointSchema).optional(),
   strokeColor: z.string().optional(),
   strokeWidth: z.number().optional(),
+  // Table specific
+  tableData: z.array(z.array(tableCellSchema)).optional(),
+  rows: z.number().optional(),
+  cols: z.number().optional(),
+  // Connector specific
+  connectorType: z.enum(["straight", "elbow", "curved"]).optional(),
+  startPoint: connectorEndpointSchema.optional(),
+  endPoint: connectorEndpointSchema.optional(),
+  arrowStart: z.boolean().optional(),
+  arrowEnd: z.boolean().optional(),
 });
 export type UpdateItemRequest = z.infer<typeof updateItemRequestSchema>;
 

@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowRight, Users, Zap, Globe } from "lucide-react";
+import { ArrowRight, Sparkles, Users, Zap, Globe } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 
@@ -72,15 +72,10 @@ export default function Index() {
           transition={{ duration: 0.5 }}
           className="flex items-center justify-between mb-16 md:mb-24"
         >
-          <div className="flex items-center gap-3">
-  <img
-    src="/favicon.png"
-    alt="Collaborate"
-    className="w-7 h-7 rounded-md"
-  />
-  <span className="text-xl font-semibold tracking-tight">Collaborate</span>
-</div>
-
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-6 h-6 text-primary" />
+            <span className="text-xl font-semibold tracking-tight">Collaborate</span>
+          </div>
         </motion.header>
 
         {/* Hero */}
