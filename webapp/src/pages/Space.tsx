@@ -1,6 +1,6 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { spaceApi } from "@/lib/space-api";
 import { useCanvas } from "@/hooks/use-canvas";
 import { useLocalUser } from "@/hooks/use-local-user";
@@ -259,7 +259,12 @@ function SpaceCanvas({
           to="/"
           className="flex items-center gap-2 pointer-events-auto hover:opacity-80 transition-opacity"
         >
-          <Sparkles className="w-5 h-5 text-primary" />
+          <img
+  src="/favicon.png"
+  alt="Collaborate"
+  className="w-5 h-5"
+/>
+
           <span className="font-semibold">Collaborate</span>
         </Link>
         <div className="pointer-events-auto flex items-center gap-2">
