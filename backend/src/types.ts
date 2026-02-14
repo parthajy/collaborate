@@ -34,6 +34,12 @@ export const shapeTypeSchema = z.enum([
   "hexagon",
   "arrow",
   "line",
+  // Flowchart shapes
+  "terminator",   // Rounded rectangle for start/end
+  "process",      // Rectangle for process steps
+  "decision",     // Diamond (alias for flowchart clarity)
+  "data",         // Parallelogram for input/output
+  "document",     // Document shape with wavy bottom
 ]);
 export type ShapeType = z.infer<typeof shapeTypeSchema>;
 
@@ -102,6 +108,7 @@ export type Space = z.infer<typeof spaceSchema>;
 
 // Create item request
 export const createItemRequestSchema = z.object({
+  id: z.string().optional(), // Client-provided ID to prevent SSE duplicates
   type: canvasItemTypeSchema,
   x: z.number(),
   y: z.number(),

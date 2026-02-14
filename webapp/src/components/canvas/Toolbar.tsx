@@ -25,6 +25,10 @@ import {
   Table,
   MoveRight,
   Upload,
+  Grid3X3,
+  Play,
+  FileText,
+  Workflow,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -57,6 +61,7 @@ interface ToolbarProps {
   zoom: number;
   isDrawingMode?: boolean;
   isPanMode?: boolean;
+  isGridSnap?: boolean;
   onAddItem: (type: CanvasItem["type"], shapeType?: string) => void;
   onAddImage: (url: string) => void;
   onAddEmoji: (emoji: string) => void;
@@ -70,6 +75,7 @@ interface ToolbarProps {
   onResetSpace: () => void;
   onToggleDrawingMode?: () => void;
   onTogglePanMode?: () => void;
+  onToggleGridSnap?: () => void;
   onExportPNG?: () => void;
 }
 
@@ -84,6 +90,15 @@ const SHAPE_OPTIONS = [
   { type: "line", icon: Minus, label: "Line" },
 ];
 
+// Flowchart specific shapes
+const FLOWCHART_OPTIONS = [
+  { type: "terminator", icon: Play, label: "Start/End" },
+  { type: "process", icon: Square, label: "Process" },
+  { type: "decision", icon: Diamond, label: "Decision" },
+  { type: "data", icon: FileText, label: "Data I/O" },
+  { type: "document", icon: FileText, label: "Document" },
+];
+
 const EMOJI_OPTIONS = ["✨", "💡", "🎯", "🚀", "❤️", "👍", "⭐", "🔥", "💬", "📌", "✅", "❓"];
 
 export function Toolbar({
@@ -91,6 +106,7 @@ export function Toolbar({
   zoom,
   isDrawingMode = false,
   isPanMode = false,
+  isGridSnap = false,
   onAddItem,
   onAddImage,
   onAddEmoji,
@@ -104,6 +120,7 @@ export function Toolbar({
   onResetSpace,
   onToggleDrawingMode,
   onTogglePanMode,
+  onToggleGridSnap,
   onExportPNG,
 }: ToolbarProps) {
   const [imageUrl, setImageUrl] = useState("");
@@ -191,6 +208,37 @@ export function Toolbar({
                     </TooltipTrigger>
                     <TooltipContent>{label}</TooltipContent>
                   </Tooltip>
+                ))}
+              </div>
+            </PopoverContent>
+          </Popover>
+
+          {/* Flowchart shapes picker */}
+          <Popover>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <PopoverTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-10 w-10">
+                    <Workflow className="h-5 w-5" />
+                  </Button>
+                </PopoverTrigger>
+              </TooltipTrigger>
+              <TooltipContent>Flowchart shapes</TooltipContent>
+            </Tooltip>
+            <PopoverContent className="w-auto p-2" side="top">
+              <div className="flex flex-col gap-1">
+                <p className="text-xs text-muted-foreground px-2 pb-1">Flowchart</p>
+                {FLOWCHART_OPTIONS.map(({ type, icon: Icon, label }) => (
+                  <Button
+                    key={type}
+                    variant="ghost"
+                    size="sm"
+                    className="justify-start gap-2"
+                    onClick={() => onAddItem("shape", type)}
+                  >
+                    <Icon className="h-4 w-4" />
+                    {label}
+                  </Button>
                 ))}
               </div>
             </PopoverContent>
@@ -376,6 +424,21 @@ export function Toolbar({
             label="Reset view"
             onClick={onResetView}
           />
+
+          {/* Grid snap toggle */}
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant={isGridSnap ? "default" : "ghost"}
+                size="icon"
+                className={cn("h-10 w-10", isGridSnap && "bg-primary text-primary-foreground")}
+                onClick={onToggleGridSnap}
+              >
+                <Grid3X3 className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{isGridSnap ? "Disable grid snap" : "Enable grid snap"}</TooltipContent>
+          </Tooltip>
         </div>
 
         {/* Actions */}

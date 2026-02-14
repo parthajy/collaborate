@@ -27,6 +27,7 @@ interface CanvasProps {
   cursors?: CursorPosition[];
   isDrawingMode?: boolean;
   isPanMode?: boolean;
+  isGridSnap?: boolean;
   drawingColor?: string;
   drawingWidth?: number;
   onSelect: (id: string | null) => void;
@@ -40,6 +41,7 @@ interface CanvasProps {
   onDrawingStart?: (startPoint: { x: number; y: number }) => void;
   onDrawingMove?: (point: { x: number; y: number }) => void;
   onDrawingEnd?: (points: Array<{ x: number; y: number }>) => void;
+  onQuickConnect?: (startPoint: { x: number; y: number }) => void;
   canvasRef?: React.RefObject<HTMLDivElement>;
 }
 
@@ -51,6 +53,7 @@ export function Canvas({
   cursors = [],
   isDrawingMode = false,
   isPanMode = false,
+  isGridSnap = false,
   drawingColor = "#000000",
   drawingWidth = 3,
   onSelect,
@@ -64,6 +67,7 @@ export function Canvas({
   onDrawingStart,
   onDrawingMove,
   onDrawingEnd,
+  onQuickConnect,
   canvasRef,
 }: CanvasProps) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -239,7 +243,14 @@ export function Canvas({
       case "text":
         return <TextItem key={item.id} {...props} />;
       case "shape":
-        return <ShapeItem key={item.id} {...props} />;
+        return (
+          <ShapeItem
+            key={item.id}
+            {...props}
+            isGridSnap={isGridSnap}
+            onQuickConnect={onQuickConnect ? (fromPoint) => onQuickConnect(fromPoint) : undefined}
+          />
+        );
       case "image":
         return <ImageItem key={item.id} {...props} />;
       case "emoji":
@@ -251,7 +262,7 @@ export function Canvas({
       case "table":
         return <TableItem key={item.id} {...props} />;
       case "connector":
-        return <ConnectorItem key={item.id} {...props} />;
+        return <ConnectorItem key={item.id} {...props} items={items} isGridSnap={isGridSnap} />;
       default:
         return null;
     }

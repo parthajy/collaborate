@@ -2,7 +2,7 @@ import type { CanvasItem, Space, CreateItemRequest, UpdateItemRequest, SSEEvent 
 
 export type { CanvasItem, Space, CreateItemRequest, UpdateItemRequest, SSEEvent };
 
-export type ShapeType = "rectangle" | "circle" | "triangle" | "diamond" | "star" | "hexagon" | "arrow" | "line";
+export type ShapeType = "rectangle" | "circle" | "triangle" | "diamond" | "star" | "hexagon" | "arrow" | "line" | "terminator" | "process" | "decision" | "data" | "document";
 
 export interface CursorData {
   clientId: string;

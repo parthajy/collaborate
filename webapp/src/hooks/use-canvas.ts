@@ -2,6 +2,15 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import type { CanvasItem, CreateItemRequest, ShapeType } from "@/lib/space-api";
 import { spaceApi, STICKY_COLORS, DEFAULT_DIMENSIONS } from "@/lib/space-api";
 
+// Generate a UUID v4
+function generateUUID(): string {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
 interface UseCanvasProps {
   slug: string;
   initialItems: CanvasItem[];
@@ -87,8 +96,9 @@ export function useCanvas({ slug, initialItems, userName, userColor }: UseCanvas
           break;
         case "item:updated":
           if (event.item) {
-            // Skip if we deleted this item
+            // Skip if we deleted this item - highest priority check
             if (myDeletedItems.current.has(event.item.id)) {
+              console.log("Ignoring SSE update for deleted item:", event.item.id);
               return;
             }
             // Skip if we recently updated this item (to prevent SSE from reverting our changes)
@@ -96,9 +106,14 @@ export function useCanvas({ slug, initialItems, userName, userColor }: UseCanvas
             if (lastUpdate && Date.now() - lastUpdate < 500) {
               return;
             }
-            setItems((prev) =>
-              prev.map((i) => (i.id === event.item!.id ? event.item! : i))
-            );
+            // Only update if item exists (not deleted locally)
+            setItems((prev) => {
+              // Double-check item still exists before updating
+              if (!prev.some((i) => i.id === event.item!.id)) {
+                return prev;
+              }
+              return prev.map((i) => (i.id === event.item!.id ? event.item! : i));
+            });
           }
           break;
         case "item:deleted":
@@ -242,39 +257,58 @@ export function useCanvas({ slug, initialItems, userName, userColor }: UseCanvas
 
       // Add connector-specific data
       if (type === "connector") {
-        const connType = options?.content as "straight" | "elbow" | "curved" || "straight";
+        const connType = options?.connectorType || "straight";
+        // Position connector endpoints relative to viewport center
+        const startX = centerX - 75;
+        const startY = centerY;
+        const endX = centerX + 75;
+        const endY = centerY;
+
         request.connectorType = connType;
-        request.startPoint = { x: centerX - 50, y: centerY };
-        request.endPoint = { x: centerX + 50, y: centerY };
+        request.startPoint = { x: startX, y: startY };
+        request.endPoint = { x: endX, y: endY };
         request.arrowEnd = true;
         request.arrowStart = false;
-        request.content = undefined; // Clear content since we used it for type
+        // x,y for connectors is the top-left of bounding box (calculated from start/end points)
+        request.x = Math.min(startX, endX) - 20;
+        request.y = Math.min(startY, endY) - 20;
       }
 
       try {
-        // Optimistic update
-        const tempId = `temp-${Date.now()}`;
-        const tempItem: CanvasItem = {
-          id: tempId,
+        // Generate client-side UUID to prevent SSE race condition duplicates
+        const clientId = generateUUID();
+
+        // Add the client-generated ID to the request
+        const requestWithId = { ...request, id: clientId };
+
+        // Mark this item as created by us BEFORE adding to UI
+        myCreatedItems.current.add(clientId);
+
+        // Optimistic update with the final ID (no temp ID needed)
+        const optimisticItem: CanvasItem = {
+          id: clientId,
           ...request,
           zIndex: maxZIndex.current + 1,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         };
-        setItems((prev) => [...prev, tempItem]);
+        setItems((prev) => [...prev, optimisticItem]);
+        setSelectedId(clientId);
 
-        const newItem = await spaceApi.createItem(slug, request);
+        // Send to backend with the same ID
+        const newItem = await spaceApi.createItem(slug, requestWithId);
 
-        // Mark this item as created by us to avoid SSE duplicate
-        myCreatedItems.current.add(newItem.id);
+        // Update with server response (timestamps, etc.) - ID should match
+        setItems((prev) => prev.map((i) => (i.id === clientId ? newItem : i)));
 
-        // Replace temp item with real one
-        setItems((prev) => prev.map((i) => (i.id === tempId ? newItem : i)));
-        setSelectedId(newItem.id);
         return newItem;
       } catch (error) {
-        // Remove temp item on error
-        setItems((prev) => prev.filter((i) => !i.id.startsWith("temp-")));
+        // Remove the item on error
+        const clientId = request.id;
+        if (clientId) {
+          myCreatedItems.current.delete(clientId);
+        }
+        setItems((prev) => prev.filter((i) => i.id !== clientId));
         console.error("Failed to create item:", error);
         throw error;
       }
@@ -341,38 +375,40 @@ export function useCanvas({ slug, initialItems, userName, userColor }: UseCanvas
     async (itemId: string) => {
       console.log("Deleting item:", itemId);
 
-      // Clear any pending updates for this item
+      // Clear any pending updates for this item FIRST
       const pending = pendingUpdates.current.get(itemId);
       if (pending) {
         clearTimeout(pending.timeout);
         pendingUpdates.current.delete(itemId);
       }
 
-      // Mark as deleted to prevent SSE from bringing it back
+      // Also clear from recent updates to prevent any race conditions
+      recentUpdates.current.delete(itemId);
+
+      // Mark as deleted BEFORE removing from UI - this prevents SSE events from adding it back
       myDeletedItems.current.add(itemId);
 
-      // Optimistic update
+      // Optimistic update - capture item before removal
       const deletedItem = items.find((i) => i.id === itemId);
       setItems((prev) => prev.filter((i) => i.id !== itemId));
       if (selectedId === itemId) setSelectedId(null);
 
-      // Don't call backend for temp items (optimistic items that haven't been saved yet)
-      if (itemId.startsWith("temp-")) {
-        return;
-      }
+      // Also remove from myCreatedItems if it was just created
+      myCreatedItems.current.delete(itemId);
 
       try {
         await spaceApi.deleteItem(slug, itemId);
         console.log("Item deleted successfully");
-        // Clean up after successful delete (allow re-creation if needed)
+        // Keep in myDeletedItems for a longer time to prevent SSE race conditions
         setTimeout(() => {
           myDeletedItems.current.delete(itemId);
-        }, 5000);
+        }, 10000); // Increased to 10 seconds
       } catch (error) {
-        // Restore on error
+        // Restore on error - but only if not a 404 (item already deleted)
         console.error("Failed to delete item:", error);
-        myDeletedItems.current.delete(itemId);
-        if (deletedItem) {
+        const is404 = error instanceof Error && error.message.includes("not found");
+        if (!is404 && deletedItem) {
+          myDeletedItems.current.delete(itemId);
           setItems((prev) => [...prev, deletedItem]);
         }
       }

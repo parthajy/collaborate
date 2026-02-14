@@ -63,8 +63,11 @@ spacesRouter.post(
     const space = getOrCreateSpace(slug);
     const now = new Date().toISOString();
 
+    // Use client-provided ID or generate one
+    const itemId = body.id || generateItemId();
+
     const item: CanvasItem = {
-      id: generateItemId(),
+      id: itemId,
       type: body.type,
       x: body.x,
       y: body.y,
@@ -79,6 +82,17 @@ spacesRouter.post(
       points: body.points,
       strokeColor: body.strokeColor,
       strokeWidth: body.strokeWidth,
+      createdBy: body.createdBy,
+      // Table specific fields
+      tableData: body.tableData,
+      rows: body.rows,
+      cols: body.cols,
+      // Connector specific fields
+      connectorType: body.connectorType,
+      startPoint: body.startPoint,
+      endPoint: body.endPoint,
+      arrowStart: body.arrowStart,
+      arrowEnd: body.arrowEnd,
       createdAt: now,
       updatedAt: now,
     };
@@ -135,6 +149,16 @@ spacesRouter.patch(
     if (updates.points !== undefined) item.points = updates.points;
     if (updates.strokeColor !== undefined) item.strokeColor = updates.strokeColor;
     if (updates.strokeWidth !== undefined) item.strokeWidth = updates.strokeWidth;
+    // Table specific fields
+    if (updates.tableData !== undefined) item.tableData = updates.tableData;
+    if (updates.rows !== undefined) item.rows = updates.rows;
+    if (updates.cols !== undefined) item.cols = updates.cols;
+    // Connector specific fields
+    if (updates.connectorType !== undefined) item.connectorType = updates.connectorType;
+    if (updates.startPoint !== undefined) item.startPoint = updates.startPoint;
+    if (updates.endPoint !== undefined) item.endPoint = updates.endPoint;
+    if (updates.arrowStart !== undefined) item.arrowStart = updates.arrowStart;
+    if (updates.arrowEnd !== undefined) item.arrowEnd = updates.arrowEnd;
     item.updatedAt = now;
 
     space.updatedAt = now;

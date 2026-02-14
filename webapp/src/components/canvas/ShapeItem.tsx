@@ -2,16 +2,19 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import type { CanvasItem } from "@/lib/space-api";
 import { cn } from "@/lib/utils";
 import { Trash2 } from "lucide-react";
+import { snapToGrid } from "@/lib/shape-utils";
 
 interface ShapeItemProps {
   item: CanvasItem;
   isSelected: boolean;
   zoom: number;
+  isGridSnap?: boolean;
   onSelect: () => void;
   onUpdate: (updates: Partial<CanvasItem>) => Promise<void>;
   onDelete: () => Promise<void>;
   onDragStart: () => void;
   onDragEnd: () => void;
+  onQuickConnect?: (fromPoint: { x: number; y: number; side: string }) => void;
 }
 
 const SHAPE_COLORS = [
@@ -27,12 +30,15 @@ export function ShapeItem({
   item,
   isSelected,
   zoom,
+  isGridSnap = false,
   onSelect,
   onUpdate,
   onDelete,
   onDragStart,
   onDragEnd,
+  onQuickConnect,
 }: ShapeItemProps) {
+  const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isResizing, setIsResizing] = useState(false);
   const [localPos, setLocalPos] = useState({ x: item.x, y: item.y });
@@ -72,8 +78,15 @@ export function ShapeItem({
     const handleMouseMove = (e: MouseEvent) => {
       const dx = (e.clientX - dragStart.current.x) / zoom;
       const dy = (e.clientY - dragStart.current.y) / zoom;
-      const newX = dragStart.current.itemX + dx;
-      const newY = dragStart.current.itemY + dy;
+      let newX = dragStart.current.itemX + dx;
+      let newY = dragStart.current.itemY + dy;
+
+      // Apply grid snap if enabled
+      if (isGridSnap) {
+        const snapped = snapToGrid({ x: newX, y: newY });
+        newX = snapped.x;
+        newY = snapped.y;
+      }
 
       // Update local position immediately for smooth visual
       setLocalPos({ x: newX, y: newY });
@@ -100,7 +113,7 @@ export function ShapeItem({
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [isDragging, zoom, onUpdate, onDragEnd]);
+  }, [isDragging, zoom, onUpdate, onDragEnd, isGridSnap]);
 
   const handleResizeStart = useCallback(
     (e: React.MouseEvent) => {
@@ -263,6 +276,76 @@ export function ShapeItem({
           />
         );
       }
+      // Flowchart shapes
+      case "terminator": {
+        // Rounded rectangle (pill shape) for start/end
+        const radius = Math.min(width, height) / 2 - 4;
+        return (
+          <rect
+            x={4}
+            y={4}
+            width={width - 8}
+            height={height - 8}
+            rx={radius}
+            ry={radius}
+            fill={color}
+            opacity={0.8}
+          />
+        );
+      }
+      case "process": {
+        // Simple rectangle for process steps (sharper corners than default)
+        return (
+          <rect
+            x={4}
+            y={4}
+            width={width - 8}
+            height={height - 8}
+            rx={4}
+            fill={color}
+            opacity={0.8}
+          />
+        );
+      }
+      case "decision": {
+        // Diamond shape (same as existing diamond but slightly different)
+        return (
+          <polygon
+            points={`${width / 2},4 ${width - 4},${height / 2} ${width / 2},${height - 4} 4,${height / 2}`}
+            fill={color}
+            opacity={0.8}
+          />
+        );
+      }
+      case "data": {
+        // Parallelogram for input/output
+        const skew = width * 0.15;
+        return (
+          <polygon
+            points={`${skew + 4},4 ${width - 4},4 ${width - skew - 4},${height - 4} 4,${height - 4}`}
+            fill={color}
+            opacity={0.8}
+          />
+        );
+      }
+      case "document": {
+        // Document shape with wavy bottom
+        const waveHeight = height * 0.15;
+        return (
+          <path
+            d={`
+              M 4 4
+              L ${width - 4} 4
+              L ${width - 4} ${height - waveHeight - 4}
+              Q ${width * 0.75} ${height - 4}, ${width / 2} ${height - waveHeight - 4}
+              Q ${width * 0.25} ${height - waveHeight * 2 - 4}, 4 ${height - waveHeight - 4}
+              Z
+            `}
+            fill={color}
+            opacity={0.8}
+          />
+        );
+      }
       default: // rectangle
         return (
           <rect
@@ -294,6 +377,8 @@ export function ShapeItem({
         zIndex: item.zIndex || 0,
       }}
       onMouseDown={handleMouseDown}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
       <svg
         width={item.width || 100}
@@ -344,6 +429,66 @@ export function ShapeItem({
           onMouseDown={handleResizeStart}
           className="absolute bottom-0 right-0 w-4 h-4 cursor-se-resize bg-primary rounded-full opacity-80"
         />
+      )}
+
+      {/* Quick-connect handles - show on hover or selection */}
+      {(isSelected || isHovered) && !isDragging && onQuickConnect && (
+        <>
+          {/* Top */}
+          <div
+            className="absolute left-1/2 -translate-x-1/2 -top-2 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white shadow-md cursor-crosshair hover:scale-125 transition-transform"
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              const width = item.width || 100;
+              onQuickConnect({
+                x: localPos.x + width / 2,
+                y: localPos.y,
+                side: "top",
+              });
+            }}
+          />
+          {/* Right */}
+          <div
+            className="absolute top-1/2 -translate-y-1/2 -right-2 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white shadow-md cursor-crosshair hover:scale-125 transition-transform"
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              const width = item.width || 100;
+              const height = item.height || 100;
+              onQuickConnect({
+                x: localPos.x + width,
+                y: localPos.y + height / 2,
+                side: "right",
+              });
+            }}
+          />
+          {/* Bottom */}
+          <div
+            className="absolute left-1/2 -translate-x-1/2 -bottom-2 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white shadow-md cursor-crosshair hover:scale-125 transition-transform"
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              const width = item.width || 100;
+              const height = item.height || 100;
+              onQuickConnect({
+                x: localPos.x + width / 2,
+                y: localPos.y + height,
+                side: "bottom",
+              });
+            }}
+          />
+          {/* Left */}
+          <div
+            className="absolute top-1/2 -translate-y-1/2 -left-2 w-4 h-4 rounded-full bg-emerald-500 border-2 border-white shadow-md cursor-crosshair hover:scale-125 transition-transform"
+            onMouseDown={(e) => {
+              e.stopPropagation();
+              const height = item.height || 100;
+              onQuickConnect({
+                x: localPos.x,
+                y: localPos.y + height / 2,
+                side: "left",
+              });
+            }}
+          />
+        </>
       )}
     </div>
   );

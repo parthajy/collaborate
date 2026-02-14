@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
-import { spaceApi } from "@/lib/space-api";
+import { Sparkles, Loader2 } from "lucide-react";
+import { spaceApi, type ShapeType } from "@/lib/space-api";
 import { useCanvas } from "@/hooks/use-canvas";
 import { useLocalUser } from "@/hooks/use-local-user";
 import { Canvas } from "@/components/canvas/Canvas";
@@ -72,6 +72,7 @@ function SpaceCanvas({
   const canvasRef = useRef<HTMLDivElement>(null);
   const [isDrawingMode, setIsDrawingMode] = useState(false);
   const [isPanMode, setIsPanMode] = useState(false);
+  const [isGridSnap, setIsGridSnap] = useState(false);
   const [drawingColor] = useState("#000000");
   const [drawingWidth] = useState(3);
 
@@ -98,7 +99,7 @@ function SpaceCanvas({
   } = useCanvas({ slug, initialItems, userName, userColor });
 
   const handleAddItem = async (type: Parameters<typeof createItem>[0], shapeType?: string) => {
-    const item = await createItem(type, shapeType ? { shapeType: shapeType as "rectangle" | "circle" | "triangle" | "diamond" | "star" | "hexagon" | "arrow" | "line" } : undefined);
+    const item = await createItem(type, shapeType ? { shapeType: shapeType as ShapeType } : undefined);
     return item;
   };
 
@@ -128,9 +129,25 @@ function SpaceCanvas({
 
   const handleAddConnector = async (connectorType: "straight" | "elbow" | "curved") => {
     await createItem("connector", {
-      content: connectorType,
+      connectorType,
     });
   };
+
+  // Quick connect from shape - creates a connector starting from a shape's connection point
+  const handleQuickConnect = useCallback(
+    async (startPoint: { x: number; y: number }) => {
+      // Create a connector starting from the given point
+      // End point is offset by 100px to the right by default
+      const endX = startPoint.x + 100;
+      const endY = startPoint.y;
+
+      await createItem("connector", {
+        connectorType: "straight",
+        position: { x: Math.min(startPoint.x, endX) - 20, y: Math.min(startPoint.y, endY) - 20 },
+      });
+    },
+    [createItem]
+  );
 
   const handleAddLocalImage = async (file: File) => {
     // Convert file to data URL for local storage
@@ -173,6 +190,11 @@ function SpaceCanvas({
     setIsDrawingMode(false);
     setSelectedId(null);
   }, [setSelectedId]);
+
+  // Grid snap toggle
+  const handleToggleGridSnap = useCallback(() => {
+    setIsGridSnap((prev) => !prev);
+  }, []);
 
   // Drawing handlers
   const handleDrawingEnd = useCallback(
@@ -259,12 +281,7 @@ function SpaceCanvas({
           to="/"
           className="flex items-center gap-2 pointer-events-auto hover:opacity-80 transition-opacity"
         >
-          <img
-  src="/favicon.png"
-  alt="Collaborate"
-  className="w-5 h-5"
-/>
-
+          <Sparkles className="w-5 h-5 text-primary" />
           <span className="font-semibold">Collaborate</span>
         </Link>
         <div className="pointer-events-auto flex items-center gap-2">
@@ -295,6 +312,7 @@ function SpaceCanvas({
         cursors={cursors}
         isDrawingMode={isDrawingMode}
         isPanMode={isPanMode}
+        isGridSnap={isGridSnap}
         drawingColor={drawingColor}
         drawingWidth={drawingWidth}
         onSelect={setSelectedId}
@@ -306,6 +324,7 @@ function SpaceCanvas({
         onDoubleClick={handleDoubleClick}
         onCursorMove={handleCursorMove}
         onDrawingEnd={handleDrawingEnd}
+        onQuickConnect={handleQuickConnect}
         canvasRef={canvasRef}
       />
 
@@ -315,6 +334,7 @@ function SpaceCanvas({
         zoom={zoom}
         isDrawingMode={isDrawingMode}
         isPanMode={isPanMode}
+        isGridSnap={isGridSnap}
         onAddItem={handleAddItem}
         onAddImage={handleAddImage}
         onAddEmoji={handleAddEmoji}
@@ -328,6 +348,7 @@ function SpaceCanvas({
         onResetSpace={resetSpace}
         onToggleDrawingMode={handleToggleDrawingMode}
         onTogglePanMode={handleTogglePanMode}
+        onToggleGridSnap={handleToggleGridSnap}
         onExportPNG={handleExportPNG}
       />
     </div>

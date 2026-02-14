@@ -2,11 +2,14 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import type { CanvasItem } from "@/lib/space-api";
 import { cn } from "@/lib/utils";
 import { Trash2 } from "lucide-react";
+import { findNearestConnectionPoint, snapToGrid } from "@/lib/shape-utils";
 
 interface ConnectorItemProps {
   item: CanvasItem;
   isSelected: boolean;
   zoom: number;
+  items?: CanvasItem[]; // All items for snapping
+  isGridSnap?: boolean;
   onSelect: () => void;
   onUpdate: (updates: Partial<CanvasItem>) => Promise<void>;
   onDelete: () => Promise<void>;
@@ -20,6 +23,8 @@ export function ConnectorItem({
   item,
   isSelected,
   zoom,
+  items = [],
+  isGridSnap = false,
   onSelect,
   onUpdate,
   onDelete,
@@ -27,13 +32,22 @@ export function ConnectorItem({
   onDragEnd,
 }: ConnectorItemProps) {
   const [dragTarget, setDragTarget] = useState<DragTarget>(null);
-  const [localStart, setLocalStart] = useState(item.startPoint || { x: 0, y: 0 });
-  const [localEnd, setLocalEnd] = useState(item.endPoint || { x: 100, y: 100 });
+
+  // Use stored values - NEVER default to 0,0 as that causes rendering at top-left
+  const storedStart = item.startPoint;
+  const storedEnd = item.endPoint;
+
+  // Calculate fallback positions based on item.x, item.y if startPoint/endPoint not set
+  const fallbackStart = { x: (item.x || 0) + 20, y: (item.y || 0) + 50 };
+  const fallbackEnd = { x: (item.x || 0) + 150, y: (item.y || 0) + 50 };
+
+  const [localStart, setLocalStart] = useState(storedStart || fallbackStart);
+  const [localEnd, setLocalEnd] = useState(storedEnd || fallbackEnd);
   const dragStartRef = useRef({ x: 0, y: 0, startX: 0, startY: 0, endX: 0, endY: 0 });
   const rafRef = useRef<number | null>(null);
 
-  const startPoint = item.startPoint || { x: 0, y: 0 };
-  const endPoint = item.endPoint || { x: 100, y: 100 };
+  const startPoint = storedStart || fallbackStart;
+  const endPoint = storedEnd || fallbackEnd;
   const connectorType = item.connectorType || "straight";
   const arrowEnd = item.arrowEnd !== false;
   const arrowStart = item.arrowStart || false;
@@ -43,8 +57,13 @@ export function ConnectorItem({
   // Sync from props when not dragging
   useEffect(() => {
     if (!dragTarget) {
-      setLocalStart(item.startPoint || { x: 0, y: 0 });
-      setLocalEnd(item.endPoint || { x: 100, y: 100 });
+      // Only update if we have valid stored values
+      if (item.startPoint && (item.startPoint.x !== 0 || item.startPoint.y !== 0)) {
+        setLocalStart(item.startPoint);
+      }
+      if (item.endPoint && (item.endPoint.x !== 0 || item.endPoint.y !== 0)) {
+        setLocalEnd(item.endPoint);
+      }
     }
   }, [item.startPoint, item.endPoint, dragTarget]);
 
@@ -98,6 +117,9 @@ export function ConnectorItem({
     [localStart, localEnd, onSelect, onDragStart]
   );
 
+  // Track snap state for visual feedback
+  const [snapIndicator, setSnapIndicator] = useState<{ x: number; y: number } | null>(null);
+
   useEffect(() => {
     if (!dragTarget) return;
 
@@ -106,36 +128,74 @@ export function ConnectorItem({
       const dy = (e.clientY - dragStartRef.current.y) / zoom;
 
       if (dragTarget === "start") {
-        const newStart = {
+        let newStart = {
           x: dragStartRef.current.startX + dx,
           y: dragStartRef.current.startY + dy,
         };
+
+        // Try to snap to a shape connection point
+        const snapResult = findNearestConnectionPoint(newStart, items, item.id);
+        if (snapResult) {
+          newStart = { x: snapResult.point.x, y: snapResult.point.y };
+          setSnapIndicator(newStart);
+        } else if (isGridSnap) {
+          newStart = snapToGrid(newStart);
+          setSnapIndicator(null);
+        } else {
+          setSnapIndicator(null);
+        }
+
         setLocalStart(newStart);
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         rafRef.current = requestAnimationFrame(() => {
-          onUpdate({ startPoint: newStart });
+          onUpdate({
+            startPoint: { ...newStart, itemId: snapResult?.itemId }
+          });
         });
       } else if (dragTarget === "end") {
-        const newEnd = {
+        let newEnd = {
           x: dragStartRef.current.endX + dx,
           y: dragStartRef.current.endY + dy,
         };
+
+        // Try to snap to a shape connection point
+        const snapResult = findNearestConnectionPoint(newEnd, items, item.id);
+        if (snapResult) {
+          newEnd = { x: snapResult.point.x, y: snapResult.point.y };
+          setSnapIndicator(newEnd);
+        } else if (isGridSnap) {
+          newEnd = snapToGrid(newEnd);
+          setSnapIndicator(null);
+        } else {
+          setSnapIndicator(null);
+        }
+
         setLocalEnd(newEnd);
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         rafRef.current = requestAnimationFrame(() => {
-          onUpdate({ endPoint: newEnd });
+          onUpdate({
+            endPoint: { ...newEnd, itemId: snapResult?.itemId }
+          });
         });
       } else if (dragTarget === "line") {
-        const newStart = {
+        let newStart = {
           x: dragStartRef.current.startX + dx,
           y: dragStartRef.current.startY + dy,
         };
-        const newEnd = {
+        let newEnd = {
           x: dragStartRef.current.endX + dx,
           y: dragStartRef.current.endY + dy,
         };
+
+        // Apply grid snap if enabled
+        if (isGridSnap) {
+          newStart = snapToGrid(newStart);
+          newEnd = snapToGrid(newEnd);
+        }
+
         setLocalStart(newStart);
         setLocalEnd(newEnd);
+        setSnapIndicator(null);
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         rafRef.current = requestAnimationFrame(() => {
           onUpdate({ startPoint: newStart, endPoint: newEnd });
@@ -145,6 +205,7 @@ export function ConnectorItem({
 
     const handleMouseUp = () => {
       setDragTarget(null);
+      setSnapIndicator(null);
       onDragEnd();
       if (rafRef.current) {
         cancelAnimationFrame(rafRef.current);
@@ -158,7 +219,7 @@ export function ConnectorItem({
       window.removeEventListener("mousemove", handleMouseMove);
       window.removeEventListener("mouseup", handleMouseUp);
     };
-  }, [dragTarget, zoom, onUpdate, onDragEnd]);
+  }, [dragTarget, zoom, onUpdate, onDragEnd, items, item.id, isGridSnap]);
 
   // Calculate bounding box
   const minX = Math.min(localStart.x, localEnd.x) - 20;
@@ -296,6 +357,20 @@ export function ConnectorItem({
               onMouseDown={(e) => handleMouseDown(e, "end")}
             />
           </>
+        )}
+
+        {/* Snap indicator */}
+        {snapIndicator && (
+          <circle
+            cx={snapIndicator.x - minX}
+            cy={snapIndicator.y - minY}
+            r={10}
+            fill="none"
+            stroke="#10b981"
+            strokeWidth={2}
+            strokeDasharray="4 2"
+            className="pointer-events-none animate-pulse"
+          />
         )}
       </svg>
 
