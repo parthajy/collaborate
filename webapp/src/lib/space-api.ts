@@ -14,6 +14,18 @@ export interface CursorData {
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL || "";
 
+export class SpaceBlockedError extends Error {
+  code: string;
+  reason?: string;
+
+  constructor(message: string, reason?: string) {
+    super(message);
+    this.code = "SPACE_BLOCKED";
+    this.reason = reason;
+    this.name = "SpaceBlockedError";
+  }
+}
+
 // Space API
 export const spaceApi = {
   getOrCreate: async (slug: string): Promise<Space> => {
@@ -23,6 +35,9 @@ export const spaceApi = {
     });
     if (!response.ok) {
       const error = await response.json();
+      if (error.error?.code === "SPACE_BLOCKED") {
+        throw new SpaceBlockedError(error.error?.message || "This space has been blocked", error.error?.reason);
+      }
       throw new Error(error.error?.message || "Failed to load space");
     }
     const json = await response.json();

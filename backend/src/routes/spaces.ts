@@ -11,6 +11,7 @@ import {
   type CursorPosition,
 } from "../types";
 import { subscribe, unsubscribe, broadcast } from "../sse";
+import { prisma } from "../prisma";
 
 const spacesRouter = new Hono();
 
@@ -20,8 +21,8 @@ const spaces = new Map<string, Space>();
 // In-memory storage for cursor positions (per space)
 const cursors = new Map<string, Map<string, CursorPosition>>();
 
-// Helper to get or create a space
-function getOrCreateSpace(slug: string): Space {
+// Helper to get or create a space (in-memory + persist to DB for admin tracking)
+async function getOrCreateSpace(slug: string): Promise<Space> {
   if (!spaces.has(slug)) {
     const now = new Date().toISOString();
     spaces.set(slug, {
@@ -30,6 +31,13 @@ function getOrCreateSpace(slug: string): Space {
       createdAt: now,
       updatedAt: now,
     });
+
+    // Also create in database for admin tracking (upsert to avoid duplicates)
+    await prisma.space.upsert({
+      where: { slug },
+      create: { slug },
+      update: { updatedAt: new Date() },
+    }).catch((e) => console.error("Failed to persist space:", e));
   }
   return spaces.get(slug)!;
 }
@@ -44,9 +52,22 @@ function generateItemId(): string {
 spacesRouter.get(
   "/:slug",
   zValidator("param", z.object({ slug: slugSchema })),
-  (c) => {
+  async (c) => {
     const { slug } = c.req.valid("param");
-    const space = getOrCreateSpace(slug);
+
+    // Check if space is blocked in database
+    const dbSpace = await prisma.space.findUnique({ where: { slug } });
+    if (dbSpace?.blocked) {
+      return c.json({
+        error: {
+          message: "This space has been blocked",
+          code: "SPACE_BLOCKED",
+          reason: dbSpace.blockedReason
+        }
+      }, 403);
+    }
+
+    const space = await getOrCreateSpace(slug);
     return c.json({ data: space });
   }
 );
@@ -56,11 +77,11 @@ spacesRouter.post(
   "/:slug/items",
   zValidator("param", z.object({ slug: slugSchema })),
   zValidator("json", createItemRequestSchema),
-  (c) => {
+  async (c) => {
     const { slug } = c.req.valid("param");
     const body = c.req.valid("json");
 
-    const space = getOrCreateSpace(slug);
+    const space = await getOrCreateSpace(slug);
     const now = new Date().toISOString();
 
     // Use client-provided ID or generate one
@@ -99,6 +120,28 @@ spacesRouter.post(
 
     space.items.push(item);
     space.updatedAt = now;
+
+    // Persist item to database for admin tracking
+    const dbSpace = await prisma.space.findUnique({ where: { slug } });
+    if (dbSpace) {
+      await prisma.canvasItem.create({
+        data: {
+          id: itemId,
+          spaceId: dbSpace.id,
+          type: body.type,
+          x: body.x,
+          y: body.y,
+          width: body.width,
+          height: body.height,
+          content: body.content,
+          color: body.color,
+          url: body.url,
+          shapeType: body.shapeType,
+          fontSize: body.fontSize,
+          zIndex: 0,
+        },
+      }).catch((e) => console.error("Failed to persist item:", e));
+    }
 
     // Broadcast to SSE clients
     const event: SSEEvent = { type: "item:created", item };
@@ -175,7 +218,7 @@ spacesRouter.patch(
 spacesRouter.delete(
   "/:slug/items/:itemId",
   zValidator("param", z.object({ slug: slugSchema, itemId: z.string() })),
-  (c) => {
+  async (c) => {
     const { slug, itemId } = c.req.valid("param");
 
     const space = spaces.get(slug);
@@ -197,6 +240,9 @@ spacesRouter.delete(
     space.items.splice(itemIndex, 1);
     space.updatedAt = new Date().toISOString();
 
+    // Delete from database
+    await prisma.canvasItem.delete({ where: { id: itemId } }).catch(() => {});
+
     // Broadcast to SSE clients
     const event: SSEEvent = { type: "item:deleted", itemId };
     broadcast(slug, event);
@@ -209,13 +255,19 @@ spacesRouter.delete(
 spacesRouter.delete(
   "/:slug",
   zValidator("param", z.object({ slug: slugSchema })),
-  (c) => {
+  async (c) => {
     const { slug } = c.req.valid("param");
 
     const space = spaces.get(slug);
     if (space) {
       space.items = [];
       space.updatedAt = new Date().toISOString();
+    }
+
+    // Delete items from database
+    const dbSpace = await prisma.space.findUnique({ where: { slug } });
+    if (dbSpace) {
+      await prisma.canvasItem.deleteMany({ where: { spaceId: dbSpace.id } }).catch(() => {});
     }
 
     // Broadcast to SSE clients
@@ -240,12 +292,12 @@ spacesRouter.post(
   "/:slug/cursors",
   zValidator("param", z.object({ slug: slugSchema })),
   zValidator("json", cursorUpdateSchema),
-  (c) => {
+  async (c) => {
     const { slug } = c.req.valid("param");
     const cursorData = c.req.valid("json");
 
     // Ensure space exists
-    getOrCreateSpace(slug);
+    await getOrCreateSpace(slug);
 
     // Get or create cursor map for this space
     if (!cursors.has(slug)) {
@@ -328,11 +380,11 @@ spacesRouter.get(
 spacesRouter.get(
   "/:slug/events",
   zValidator("param", z.object({ slug: slugSchema })),
-  (c) => {
+  async (c) => {
     const { slug } = c.req.valid("param");
 
     // Ensure space exists
-    getOrCreateSpace(slug);
+    await getOrCreateSpace(slug);
 
     let clientId: string | null = null;
 

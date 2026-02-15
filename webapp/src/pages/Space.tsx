@@ -1,7 +1,7 @@
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Sparkles, Loader2 } from "lucide-react";
-import { spaceApi, type ShapeType } from "@/lib/space-api";
+import { Sparkles, Loader2, ShieldBan } from "lucide-react";
+import { spaceApi, SpaceBlockedError, type ShapeType } from "@/lib/space-api";
 import { useCanvas } from "@/hooks/use-canvas";
 import { useLocalUser } from "@/hooks/use-local-user";
 import { Canvas } from "@/components/canvas/Canvas";
@@ -41,6 +41,29 @@ export default function Space() {
   }
 
   if (error) {
+    // Check if space is blocked
+    if (error instanceof SpaceBlockedError) {
+      return (
+        <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6">
+          <div className="text-center max-w-md">
+            <div className="w-16 h-16 mx-auto mb-6 rounded-full bg-destructive/10 flex items-center justify-center">
+              <ShieldBan className="w-8 h-8 text-destructive" />
+            </div>
+            <h1 className="text-2xl font-bold mb-4">Space Blocked</h1>
+            <p className="text-muted-foreground mb-2">
+              This space has been blocked by an administrator.
+            </p>
+            {error.reason && (
+              <p className="text-sm text-muted-foreground mb-6">
+                Reason: {error.reason}
+              </p>
+            )}
+            <Button onClick={() => navigate("/")}>Go Home</Button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background px-6">
         <div className="text-center max-w-md">

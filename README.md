@@ -42,6 +42,12 @@ Dead-simple, free, no-login collaborative brainstorming spaces. Create a space, 
 - **Persistent Storage**: All changes are saved to the backend.
 - **Share Easily**: Copy the space URL with one click.
 - **Optimistic UI**: Smooth, responsive drag and updates.
+- **Feature Requests**: Users can submit feature requests directly from the canvas toolbar
+- **Admin Portal**: Full admin dashboard at `/partha` with:
+  - User statistics and analytics
+  - Room management (view, block, delete)
+  - Feature request management
+  - Real-time activity monitoring
 
 ## Tech Stack
 
@@ -87,12 +93,29 @@ backend/                   # Backend API server
 
 ## API Endpoints
 
+### Spaces
 - `GET /api/spaces/:slug` - Get or create a space
 - `POST /api/spaces/:slug/items` - Create a canvas item
 - `PATCH /api/spaces/:slug/items/:itemId` - Update a canvas item
 - `DELETE /api/spaces/:slug/items/:itemId` - Delete a canvas item
 - `DELETE /api/spaces/:slug` - Reset (clear) a space
 - `GET /api/spaces/:slug/events` - SSE endpoint for real-time updates
+
+### Admin (requires authentication)
+- `POST /api/admin/login` - Admin login
+- `POST /api/admin/logout` - Admin logout
+- `GET /api/admin/me` - Check auth status
+- `POST /api/admin/forgot-password` - Request password reset
+- `POST /api/admin/reset-password` - Reset password with token
+- `GET /api/admin/stats` - Dashboard statistics
+- `GET /api/admin/spaces` - List all spaces (with pagination, search, filter)
+- `GET /api/admin/spaces/:slug` - Get space details
+- `POST /api/admin/spaces/:slug/block` - Block/unblock a space
+- `DELETE /api/admin/spaces/:slug` - Delete a space
+- `GET /api/admin/features` - List feature requests
+- `PATCH /api/admin/features/:id` - Update feature request status
+- `DELETE /api/admin/features/:id` - Delete feature request
+- `POST /api/admin/feature-request` - Submit feature request (public)
 
 ## Usage
 
@@ -107,3 +130,20 @@ backend/                   # Backend API server
 - 3-50 characters
 - Lowercase letters, numbers, and hyphens only
 - Examples: `team-brainstorm`, `product-ideas`, `design-sprint`
+
+## Admin Portal
+
+Access the admin portal at `/partha` (e.g., `collaborate.so/partha`).
+
+**Default credentials:**
+- Username: `parthajy`
+- Password: `admin123` (change via forgot password)
+
+**Admin Features:**
+- View total spaces, active rooms, blocked rooms, canvas items count
+- See top active rooms by item count
+- View recent activity timeline
+- Manage feature requests (change status, delete)
+- Block/unblock rooms with optional reason
+- Delete rooms
+- Password reset via email (parthajy@gmail.com)

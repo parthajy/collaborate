@@ -55,6 +55,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import type { CanvasItem } from "@/lib/space-api";
+import { FeatureRequestModal } from "./FeatureRequestModal";
 
 interface ToolbarProps {
   slug: string;
@@ -508,6 +509,9 @@ export function Toolbar({
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
+
+          {/* Feature Request */}
+          <FeatureRequestModal slug={slug} />
         </div>
       </div>
 

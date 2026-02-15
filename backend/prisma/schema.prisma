@@ -7,12 +7,37 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Admin {
+  id                 String    @id @default(cuid())
+  username           String    @unique
+  email              String    @unique
+  passwordHash       String
+  resetToken         String?
+  resetTokenExpiry   DateTime?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
 model Space {
   id        String       @id @default(cuid())
   slug      String       @unique
+  blocked   Boolean      @default(false)
+  blockedAt DateTime?
+  blockedReason String?
   createdAt DateTime     @default(now())
   updatedAt DateTime     @updatedAt
   items     CanvasItem[]
+}
+
+model FeatureRequest {
+  id        String   @id @default(cuid())
+  title     String
+  description String
+  email     String?
+  spaceSlug String?
+  status    String   @default("pending") // pending, reviewed, planned, completed, rejected
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model CanvasItem {
