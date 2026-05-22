@@ -1,4 +1,13 @@
-# Deploy collaborate.so to the droplet on every push to main.
+# ============================================================================
+# GitHub Actions deploy workflow — NOT ACTIVE at this path.
+#
+# To enable CI deploys, move this file to:  .github/workflows/deploy.yml
+# Pushing files under .github/workflows/ needs the `workflow` token scope:
+#     gh auth refresh -s workflow
+# ...then move it and push. (Or paste it in via the GitHub web UI.)
+# ============================================================================
+#
+# Deploys collaborate.so to the droplet on every push to main.
 #
 # Required repository secrets:
 #   DEPLOY_HOST   droplet IP or hostname
