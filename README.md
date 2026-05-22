@@ -271,8 +271,12 @@ state. Scaling is a routing change, not a rewrite.
 
 ## Privacy
 
-No accounts, no cookies required, no per-user tracking. `/stats` exposes only
-aggregate counts and active room names (rooms are public by URL). The client
-uses `localStorage` for the optional display name and theme only, and degrades
-gracefully when storage is blocked. Media is referenced by URL — never
-uploaded or proxied.
+No accounts and no sign-up. The product stores no user data — rooms are
+ephemeral and `/stats` exposes only aggregate counts and active room names
+(rooms are public by URL). The client uses `localStorage` for the optional
+display name, theme, and creator id only, and degrades gracefully when
+storage is blocked. Media is referenced by URL — never uploaded or proxied.
+
+Page analytics use Google Analytics (gtag) — this is the one place cookies
+are set. Swap it for a cookieless option (e.g. Cloudflare Web Analytics) if
+you want to keep the surface fully cookie-free.
