@@ -1,0 +1,53 @@
+# collaborate.so — room-name blocklist
+# ----------------------------------------------------------------------------
+# One term per line. Lines starting with '#' are comments; blank lines ignored.
+# Matching is case-insensitive and SUBSTRING-based against the room name, and
+# also against a de-hyphenated form — so "google" blocks "my-google-room" and
+# "g-o-o-g-l-e". Keep terms lowercase. Reload requires a server restart.
+#
+# This is a deliberately SHORT starter list. Extend it for your jurisdiction
+# and audience. For hate speech in particular, do not hand-curate from memory —
+# import a maintained source (e.g. the LDNOOBW "naughty words" lists, or a
+# commercial moderation list) and append it below.
+
+# --- profanity (mild starter set) ---
+fuck
+shit
+bitch
+asshole
+cunt
+nigg
+faggot
+retard
+slut
+whore
+
+# --- hate / slurs ---
+# Intentionally minimal. APPEND a comprehensive, maintained slur list here.
+# Leaving this section thin is a known gap — treat it as a TODO for launch.
+
+# --- trademarks / impersonation ---
+google
+facebook
+instagram
+whatsapp
+microsoft
+apple
+amazon
+netflix
+youtube
+tiktok
+twitter
+disney
+paypal
+nintendo
+spotify
+openai
+anthropic
+
+# --- operational reserved-ish words (admin/impersonation bait) ---
+admin
+official
+support
+moderator
+collaborate-so

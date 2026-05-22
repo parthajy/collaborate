@@ -1,0 +1,31 @@
+{
+  "name": "collaborate-so",
+  "version": "1.0.0",
+  "private": true,
+  "description": "collaborate.so — a public, ephemeral, collaborative whiteboard",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node build.mjs --watch & tsx watch src/server/index.ts",
+    "build": "node build.mjs",
+    "typecheck": "tsc",
+    "start": "node dist/server.cjs"
+  },
+  "dependencies": {
+    "lib0": "^0.2.97",
+    "ws": "^8.18.0",
+    "y-protocols": "^1.0.6",
+    "yjs": "^13.6.20"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "@types/ws": "^8.5.13",
+    "esbuild": "^0.24.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2",
+    "y-websocket": "^2.1.0"
+  }
+}

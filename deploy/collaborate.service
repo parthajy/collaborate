@@ -1,0 +1,42 @@
+# collaborate.so — systemd unit (alternative to docker-compose).
+#
+# Use this if you would rather run the server directly on the host than in
+# Docker. You still need Nginx installed on the host for TLS; point its
+# upstream at 127.0.0.1:3000 (edit deploy/nginx.conf accordingly).
+#
+# Setup:
+#   sudo useradd --system --no-create-home collaborate
+#   sudo mkdir -p /opt/collaborate && sudo chown collaborate: /opt/collaborate
+#   # as the collaborate user, in /opt/collaborate:
+#   git clone <repo> . && npm ci && npm run build
+#   sudo cp deploy/collaborate.service /etc/systemd/system/
+#   sudo systemctl enable --now collaborate
+#
+# Update:  git pull && npm ci && npm run build && sudo systemctl restart collaborate
+
+[Unit]
+Description=collaborate.so whiteboard server
+After=network.target
+
+[Service]
+Type=simple
+User=collaborate
+Group=collaborate
+WorkingDirectory=/opt/collaborate
+ExecStart=/usr/bin/node dist/server.cjs
+Environment=NODE_ENV=production
+Environment=HOST=127.0.0.1
+Environment=PORT=3000
+Environment=TRUST_PROXY=true
+Restart=always
+RestartSec=3
+
+# --- hardening ---
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/opt/collaborate
+
+[Install]
+WantedBy=multi-user.target

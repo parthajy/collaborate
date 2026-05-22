@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>collaborate.so - changelog</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Boldonse&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=Newsreader:ital,opsz,wght@0,6..72,400;1,6..72,400;1,6..72,500&display=swap" rel="stylesheet">
+<link rel="icon" href="/coll.png" type="image/png">
+<style>
+  :root, [data-theme="dark"] {
+    --bg:          #241a30;
+    --bg-soft:     #2c2139;
+    --bg-elev:     #32243d;
+    --text:        #f3eee6;
+    --text-dim:    #9c8fac;
+    --text-dimmer: #5e5070;
+    --line:        #3a2c49;
+    --accent:      #f95d50;
+  }
+  [data-theme="light"] {
+    --bg:          #f7efe4;
+    --bg-soft:     #efe5d6;
+    --bg-elev:     #fffaf1;
+    --text:        #32243d;
+    --text-dim:    #6f6377;
+    --text-dimmer: #ad9fab;
+    --line:        #e3d7c5;
+    --accent:      #f95d50;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Geist', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    transition: background .4s ease, color .4s ease;
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+  }
+  a { color: inherit; }
+
+  nav {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 20px 32px;
+    border-bottom: 1px solid var(--line);
+  }
+  .logo { display: flex; align-items: center; text-decoration: none; }
+  .logo img { height: 26px; width: auto; display: block; }
+  .nav-right {
+    display: flex; gap: 24px; align-items: center;
+    font-family: 'Geist Mono', monospace; font-size: 11px;
+    letter-spacing: 0.04em; color: var(--text-dim);
+  }
+  .nav-right a { text-decoration: none; transition: color .2s; }
+  .nav-right a:hover { color: var(--text); }
+  .theme-toggle {
+    width: 28px; height: 28px; border-radius: 50%;
+    border: 1px solid var(--line); background: var(--bg-soft);
+    color: var(--text-dim); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .theme-toggle:hover { color: var(--text); }
+  .theme-toggle svg { width: 13px; height: 13px; }
+  [data-theme="dark"] .theme-toggle .moon { display: none; }
+  [data-theme="light"] .theme-toggle .sun { display: none; }
+
+  main { flex: 1; max-width: 760px; margin: 0 auto; padding: 80px 32px 120px; width: 100%; }
+
+  .eyebrow {
+    font-family: 'Geist Mono', monospace;
+    font-size: 11px; letter-spacing: 0.22em; color: var(--accent);
+    margin-bottom: 20px;
+  }
+  h1 {
+    font-family: 'Boldonse', serif; font-weight: 400;
+    font-size: clamp(40px, 7vw, 76px);
+    line-height: 0.96; letter-spacing: -0.035em;
+    margin-bottom: 16px;
+  }
+  .intro { color: var(--text-dim); font-size: 16px; line-height: 1.55; margin-bottom: 64px; max-width: 520px; }
+
+  .entry {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 32px;
+    padding: 36px 0;
+    border-top: 1px solid var(--line);
+  }
+  .entry .meta {
+    font-family: 'Geist Mono', monospace;
+    font-size: 12px; color: var(--text-dim);
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .entry .tag {
+    display: inline-block; width: fit-content;
+    background: var(--accent); color: #fff4ef;
+    font-size: 10px; letter-spacing: 0.05em;
+    padding: 2px 8px; border-radius: 4px;
+  }
+  .entry h2 {
+    font-family: 'Boldonse', serif; font-weight: 400;
+    font-size: 24px; letter-spacing: -0.02em;
+    margin-bottom: 14px; line-height: 1.1;
+  }
+  .entry ul { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+  .entry li {
+    color: var(--text-dim); font-size: 14px; line-height: 1.5;
+    padding-left: 18px; position: relative;
+  }
+  .entry li::before {
+    content: ""; position: absolute; left: 0; top: 8px;
+    width: 5px; height: 5px; border-radius: 50%; background: var(--accent);
+  }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding: 24px 32px;
+    display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px;
+    font-family: 'Geist Mono', monospace;
+    font-size: 10px; letter-spacing: 0.1em; color: var(--text-dim);
+  }
+  footer a { text-decoration: none; }
+  footer a:hover { color: var(--text); }
+
+  @media (max-width: 640px) {
+    .entry { grid-template-columns: 1fr; gap: 12px; }
+    main { padding: 56px 20px 80px; }
+    nav { padding: 16px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <a class="logo" href="/"><img src="/coll.svg" alt="collaborate.so"/></a>
+  <div class="nav-right">
+    <a href="/">home</a>
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>
+      </svg>
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>
+      </svg>
+    </button>
+  </div>
+</nav>
+
+<main>
+  <div class="eyebrow">- WHAT'S NEW -</div>
+  <h1>Changelog</h1>
+  <p class="intro">Every change to collaborate.so, newest first. The product is free, public, and has no accounts - so this page is the record.</p>
+
+  <div class="entry">
+    <div class="meta">
+      <span class="tag">v1.0</span>
+      <span>2026-05-22</span>
+    </div>
+    <div class="body">
+      <h2>Public launch</h2>
+      <ul>
+        <li>Open any room at collaborate.so/your-word - no login required.</li>
+        <li>Real-time multiplayer: live cursors, presence, and edits that sync instantly.</li>
+        <li>Pen, marker, eraser, text, sticky notes, shapes, flow nodes, images, video and link cards.</li>
+        <li>Infinite pan and zoom canvas with PNG snapshot export.</li>
+        <li>Rooms self-destroy 24 hours after they go quiet.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="entry">
+    <div class="meta">
+      <span class="tag">v0.9</span>
+      <span>2026-05-15</span>
+    </div>
+    <div class="body">
+      <h2>Open beta</h2>
+      <ul>
+        <li>Character-level merge for text and sticky notes - two people can type in the same note.</li>
+        <li>Live ink streaming - watch other people draw stroke by stroke.</li>
+        <li>Per-room abuse limits and a room-name filter.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="entry">
+    <div class="meta">
+      <span class="tag">v0.5</span>
+      <span>2026-05-01</span>
+    </div>
+    <div class="body">
+      <h2>Private alpha</h2>
+      <ul>
+        <li>First working canvas with CRDT-based sync.</li>
+        <li>Mobile and desktop support.</li>
+      </ul>
+    </div>
+  </div>
+</main>
+
+<footer>
+  <div>(c) COLLABORATE.SO - 2026</div>
+  <div><a href="/">HOME</a></div>
+  <div>NO COOKIES - NO ADS - NO TRACKING</div>
+</footer>
+
+<script>
+  const root = document.documentElement;
+  const saved = localStorage.getItem('cs.theme');
+  if (saved) root.setAttribute('data-theme', saved);
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    const next = root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+    root.setAttribute('data-theme', next);
+    try { localStorage.setItem('cs.theme', next); } catch (e) {}
+  });
+</script>
+
+</body>
+</html>
